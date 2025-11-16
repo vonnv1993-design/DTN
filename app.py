@@ -3,7 +3,7 @@ import pandas as pd
 import sqlite3
 import time
 from datetime import datetime
-from io import StringIO
+from io import BytesIO
 
 # Kết nối SQLite
 conn = sqlite3.connect('guests.db')
@@ -74,15 +74,29 @@ def create_export_csv(filtered_df):
         'Thời gian check in': filtered_df['check_in_time'].fillna(''),
         'Thời gian nhận quà': filtered_df['gift_confirm_time'].fillna('')
     })
-    # Sử dụng StringIO và encoding UTF-8-sig để export
-    csv_buffer = StringIO()
-    export_df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-    return csv_buffer.getvalue()
+    return export_df.to_csv(index=False, encoding='utf-8-sig')
+
+# Hàm tạo XLS cho export
+def create_export_xls(filtered_df):
+    export_df = pd.DataFrame({
+        'STT': range(1, len(filtered_df) + 1),
+        'Tên': filtered_df['name'],
+        'Vị trí': filtered_df['position'],
+        'Đã check in': filtered_df['checked_in'].map({1: 'Yes', 0: 'No'}),
+        'Đã nhận quà': filtered_df['gift_received'].map({1: 'Yes', 0: 'No'}),
+        'Thời gian check in': filtered_df['check_in_time'].fillna(''),
+        'Thời gian nhận quà': filtered_df['gift_confirm_time'].fillna('')
+    })
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        export_df.to_excel(writer, sheet_name='Guests', index=False)
+    buffer.seek(0)
+    return buffer
 
 # UI Streamlit với sidebar
 st.set_page_config(page_title="Quản lý Khách mời", page_icon="✈️", layout="wide")
 
-# CSS cho theme Vietnam Airlines (xanh và vàng đồng), trẻ trung, và fix màu chữ sidebar
+# CSS cho theme Vietnam Airlines (xanh và vàng đồng), trẻ trung, fix màu chữ sidebar và tiêu đề
 st.markdown("""
     <style>
     body { background: linear-gradient(135deg, #003366 0%, #FFD700 100%); color: white; font-family: Arial, sans-serif; }
@@ -92,7 +106,8 @@ st.markdown("""
     .stExpander { border: 3px solid #FFD700; border-radius: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); margin-bottom: 15px; background-color: rgba(255,255,255,0.1); }
     .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
     .stSidebar { background-color: #003366; color: white; }
-    .stRadio label { color: white !important; }  /* Fix màu chữ menu để hiện rõ */
+    .stRadio label { color: white !important; }
+    .stHeader, .stSubheader { color: white !important; }  /* Fix màu tiêu đề trắng */
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
     </style>
 """, unsafe_allow_html=True)
@@ -165,7 +180,11 @@ elif menu == "Xem Danh sách":
     if not filtered_df.empty:
         csv = create_export_csv(filtered_df)
         st.download_button("📥 Export Báo cáo (CSV)", csv, "guests_report.csv", "text/csv", key="download_csv")
-        st.info("💡 File CSV đã được export với encoding UTF-8 để hỗ trợ tiếng Việt. Mở trong Excel và set font Times New Roman nếu cần.")
+        
+        xls_buffer = create_export_xls(filtered_df)
+        st.download_button("📥 Export Báo cáo (XLS)", xls_buffer, "guests_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="download_xls")
+        
+        st.info("💡 File CSV/XLS đã được export với hỗ trợ tiếng Việt. Mở trong Excel và set font Times New Roman nếu cần.")
     
     if st.button("🔄 Refresh Data"):
         st.rerun()
