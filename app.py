@@ -4,6 +4,7 @@ import sqlite3
 import time
 from datetime import datetime
 from io import BytesIO
+from openpyxl.styles import Font
 
 # Kết nối SQLite
 conn = sqlite3.connect('guests.db')
@@ -76,7 +77,7 @@ def create_export_csv(filtered_df):
     })
     return export_df.to_csv(index=False, encoding='utf-8-sig')
 
-# Hàm tạo XLS cho export
+# Hàm tạo XLS cho export với font Times New Roman
 def create_export_xls(filtered_df):
     export_df = pd.DataFrame({
         'STT': range(1, len(filtered_df) + 1),
@@ -90,6 +91,13 @@ def create_export_xls(filtered_df):
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         export_df.to_excel(writer, sheet_name='Guests', index=False)
+        # Set font Times New Roman cho toàn bộ sheet
+        workbook = writer.book
+        sheet = workbook['Guests']
+        times_new_roman = Font(name='Times New Roman')
+        for row in sheet.iter_rows():
+            for cell in row:
+                cell.font = times_new_roman
     buffer.seek(0)
     return buffer
 
@@ -107,7 +115,7 @@ st.markdown("""
     .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
     .stSidebar { background-color: #003366; color: white; }
     .stRadio label { color: white !important; }
-    .stHeader, .stSubheader { color: white !important; }  /* Fix màu tiêu đề trắng */
+    .stHeader, .stSubheader, h1, h2 { color: white !important; }  /* Fix màu tiêu đề trắng */
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
     </style>
 """, unsafe_allow_html=True)
@@ -117,7 +125,7 @@ st.sidebar.title("✈️ Menu")
 menu = st.sidebar.radio("Chọn chức năng", ["Nhập/Import Danh sách", "Xem Danh sách"])
 
 if menu == "Nhập/Import Danh sách":
-    st.header("📝 Nhập hoặc Import Danh sách Khách mời")
+    st.header("📝 Nhập/Import Danh sách")
     
     # Nhập thủ công
     st.subheader("Nhập Thủ công")
@@ -138,7 +146,7 @@ if menu == "Nhập/Import Danh sách":
             st.success("Đã import thành công!")
 
 elif menu == "Xem Danh sách":
-    st.header("📋 Danh sách Khách mời")
+    st.header("📋 Xem Danh sách")
     
     # Load dữ liệu
     df = load_guests()
@@ -184,7 +192,7 @@ elif menu == "Xem Danh sách":
         xls_buffer = create_export_xls(filtered_df)
         st.download_button("📥 Export Báo cáo (XLS)", xls_buffer, "guests_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="download_xls")
         
-        st.info("💡 File CSV/XLS đã được export với hỗ trợ tiếng Việt. Mở trong Excel và set font Times New Roman nếu cần.")
+        st.info("💡 File CSV/XLS đã được export với font Times New Roman và hỗ trợ tiếng Việt hoàn toàn.")
     
     if st.button("🔄 Refresh Data"):
         st.rerun()
