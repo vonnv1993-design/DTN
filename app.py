@@ -44,6 +44,16 @@ def update_gift(guest_id):
     c.execute("UPDATE guests SET gift_received = 1, gift_confirm_time = ? WHERE id = ?", (now, guest_id))
     conn.commit()
 
+# Hàm reset check-in (undo)
+def reset_checkin(guest_id):
+    c.execute("UPDATE guests SET checked_in = 0, check_in_time = NULL WHERE id = ?", (guest_id,))
+    conn.commit()
+
+# Hàm reset gift received (undo)
+def reset_gift(guest_id):
+    c.execute("UPDATE guests SET gift_received = 0, gift_confirm_time = NULL WHERE id = ?", (guest_id,))
+    conn.commit()
+
 # Hàm import từ Excel (hỗ trợ .xls và .xlsx)
 def import_excel(uploaded_file):
     df = pd.read_excel(uploaded_file, usecols=['name', 'position'])
@@ -100,7 +110,7 @@ st.markdown("""
     .stTextInput, .stSelectbox, .stFileUploader { border-radius: 15px; border: 3px solid #FFD700; padding: 10px; background-color: rgba(255,255,255,0.9); color: #003366; }
     .stExpander { border: 3px solid #FFD700; border-radius: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); margin-bottom: 15px; background-color: rgba(255,255,255,0.1); }
     .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
-    .stSidebar { background-color: #DEA600; color: white; }
+    .stSidebar { background-color: #003366; color: white; }
     .stRadio label { color: white !important; }
     .stHeader, .stSubheader, h1, h2 { color: white !important; }  /* Fix màu tiêu đề trắng */
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
@@ -196,11 +206,21 @@ elif menu == "Xem Danh sách":
                             update_checkin(row['id'])
                             st.success(f"Đã check-in {row['name']}!")
                             st.rerun()
+                    else:
+                        if st.button(f"🔄 Undo Check-in", key=f"undo_checkin_{row['id']}"):
+                            reset_checkin(row['id'])
+                            st.warning(f"Đã undo check-in cho {row['name']}!")
+                            st.rerun()
                 with col4:
                     if not row['gift_received']:
                         if st.button(f"🎁 Confirm Gift", key=f"gift_{row['id']}"):
                             update_gift(row['id'])
                             st.success(f"Đã xác nhận quà cho {row['name']}!")
+                            st.rerun()
+                    else:
+                        if st.button(f"🔄 Undo Gift", key=f"undo_gift_{row['id']}"):
+                            reset_gift(row['id'])
+                            st.warning(f"Đã undo nhận quà cho {row['name']}!")
                             st.rerun()
     else:
         st.write("Không tìm thấy khách mời nào phù hợp với bộ lọc.")
