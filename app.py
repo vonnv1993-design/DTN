@@ -44,7 +44,7 @@ def update_gift(guest_id):
     c.execute("UPDATE guests SET gift_received = 1, gift_confirm_time = ? WHERE id = ?", (now, guest_id))
     conn.commit()
 
-# Hàm import từ Excel
+# Hàm import từ Excel (hỗ trợ .xls và .xlsx)
 def import_excel(uploaded_file):
     df = pd.read_excel(uploaded_file, usecols=['name', 'position'])
     for _, row in df.iterrows():
@@ -63,19 +63,6 @@ def filter_guests(df, search, checkin_filter, gift_filter):
     elif gift_filter == "Chưa nhận quà":
         df = df[df['gift_received'] == 0]
     return df
-
-# Hàm tạo CSV cho export với encoding UTF-8 để hỗ trợ tiếng Việt
-def create_export_csv(filtered_df):
-    export_df = pd.DataFrame({
-        'STT': range(1, len(filtered_df) + 1),
-        'Tên': filtered_df['name'],
-        'Vị trí': filtered_df['position'],
-        'Đã check in': filtered_df['checked_in'].map({1: 'Yes', 0: 'No'}),
-        'Đã nhận quà': filtered_df['gift_received'].map({1: 'Yes', 0: 'No'}),
-        'Thời gian check in': filtered_df['check_in_time'].fillna(''),
-        'Thời gian nhận quà': filtered_df['gift_confirm_time'].fillna('')
-    })
-    return export_df.to_csv(index=False, encoding='utf-8-sig')
 
 # Hàm tạo XLS cho export với font Times New Roman
 def create_export_xls(filtered_df):
@@ -137,9 +124,9 @@ if menu == "Nhập/Import Danh sách":
             save_guest(name, position)
             st.success(f"Đã thêm {name} ({position})!")
     
-    # Import Excel
+    # Import Excel (hỗ trợ .xls và .xlsx)
     st.subheader("Import từ File Excel")
-    uploaded_file = st.file_uploader("Upload file Excel (.xlsx) với cột: name, position", type="xlsx")
+    uploaded_file = st.file_uploader("Upload file Excel (.xls hoặc .xlsx) với cột: name, position", type=["xls", "xlsx"])
     if uploaded_file is not None:
         if st.button("📤 Import Excel"):
             import_excel(uploaded_file)
@@ -184,15 +171,12 @@ elif menu == "Xem Danh sách":
     else:
         filtered_df = st.session_state.get('filtered_df', df)  # Sử dụng dữ liệu đã lọc trước đó nếu có
     
-    # Export báo cáo
+    # Export báo cáo (chỉ XLS)
     if not filtered_df.empty:
-        csv = create_export_csv(filtered_df)
-        st.download_button("📥 Export Báo cáo (CSV)", csv, "guests_report.csv", "text/csv", key="download_csv")
-        
         xls_buffer = create_export_xls(filtered_df)
         st.download_button("📥 Export Báo cáo (XLS)", xls_buffer, "guests_report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="download_xls")
         
-        st.info("💡 File CSV/XLS đã được export với font Times New Roman và hỗ trợ tiếng Việt hoàn toàn.")
+        st.info("💡 File XLS đã được export với font Times New Roman và hỗ trợ tiếng Việt hoàn toàn.")
     
     if st.button("🔄 Refresh Data"):
         st.rerun()
