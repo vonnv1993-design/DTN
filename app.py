@@ -101,7 +101,7 @@ st.markdown("""
     .stExpander { border: 3px solid #FFD700; border-radius: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); margin-bottom: 15px; background-color: rgba(255,255,255,0.1); }
     .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
     .stSidebar { background-color: #003366; color: white; }
-    .stRadio label { color: white !important; }
+    .stRadio label { color: red !important; }
     .stHeader, .stSubheader, h1, h2 { color: white !important; }  /* Fix màu tiêu đề trắng */
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
     </style>
