@@ -62,23 +62,38 @@ def filter_guests(df, search, checkin_filter, gift_filter):
         df = df[df['gift_received'] == 0]
     return df
 
-# UI Streamlit với sidebar
-st.set_page_config(page_title="Quản lý Khách mời", page_icon="🎉", layout="wide")
+# Hàm tạo CSV cho export với cột cụ thể
+def create_export_csv(filtered_df):
+    export_df = pd.DataFrame({
+        'STT': range(1, len(filtered_df) + 1),
+        'Tên': filtered_df['name'],
+        'Vị trí': filtered_df['position'],
+        'Đã check in': filtered_df['checked_in'].map({1: 'Yes', 0: 'No'}),
+        'Đã nhận quà': filtered_df['gift_received'].map({1: 'Yes', 0: 'No'}),
+        'Thời gian check in': filtered_df['check_in_time'].fillna(''),
+        'Thời gian nhận quà': filtered_df['gift_confirm_time'].fillna('')
+    })
+    return export_df.to_csv(index=False)
 
-# CSS cho theme xanh và hình khối
+# UI Streamlit với sidebar
+st.set_page_config(page_title="Quản lý Khách mời", page_icon="✈️", layout="wide")
+
+# CSS cho theme Vietnam Airlines (xanh và vàng đồng), trẻ trung
 st.markdown("""
     <style>
-    body { background-color: #e0f7fa; }  /* Xanh nhạt */
-    .stButton>button { background-color: #00796b; color: white; border-radius: 10px; border: 2px solid #004d40; box-shadow: 2px 2px 5px #004d40; width: 100%; height: 50px; font-size: 18px; }
-    .stTextInput, .stSelectbox, .stFileUploader { border-radius: 10px; border: 2px solid #00796b; padding: 10px; }
-    .stExpander { border: 2px solid #00796b; border-radius: 10px; box-shadow: 2px 2px 5px #004d40; margin-bottom: 10px; }
-    .stMetric { background-color: #b2dfdb; border-radius: 10px; padding: 10px; box-shadow: 2px 2px 5px #004d40; }
+    body { background: linear-gradient(135deg, #003366 0%, #FFD700 100%); color: white; font-family: Arial, sans-serif; }
+    .stButton>button { background: linear-gradient(45deg, #FFD700, #FFA500); color: #003366; border-radius: 15px; border: 3px solid #003366; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); width: 100%; height: 50px; font-size: 18px; font-weight: bold; transition: transform 0.2s; }
+    .stButton>button:hover { transform: scale(1.05); }
+    .stTextInput, .stSelectbox, .stFileUploader { border-radius: 15px; border: 3px solid #FFD700; padding: 10px; background-color: rgba(255,255,255,0.9); color: #003366; }
+    .stExpander { border: 3px solid #FFD700; border-radius: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); margin-bottom: 15px; background-color: rgba(255,255,255,0.1); }
+    .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
+    .stSidebar { background-color: #003366; color: white; }
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
     </style>
 """, unsafe_allow_html=True)
 
 # Sidebar cho menu
-st.sidebar.title("🎉 Menu")
+st.sidebar.title("✈️ Menu")
 menu = st.sidebar.radio("Chọn chức năng", ["Nhập/Import Danh sách", "Xem Danh sách"])
 
 if menu == "Nhập/Import Danh sách":
@@ -137,8 +152,9 @@ elif menu == "Xem Danh sách":
     
     # Export báo cáo
     if not filtered_df.empty:
-        csv = filtered_df.to_csv(index=False)
+        csv = create_export_csv(filtered_df)
         st.download_button("📥 Export Báo cáo (CSV)", csv, "guests_report.csv", "text/csv", key="download_csv")
+        st.info("💡 Mở file CSV trong Excel/Google Sheets và set font thành Times New Roman để định dạng đẹp hơn.")
     
     if st.button("🔄 Refresh Data"):
         st.rerun()
