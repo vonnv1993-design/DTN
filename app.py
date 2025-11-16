@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 import time
 from datetime import datetime
+from io import StringIO
 
 # Kết nối SQLite
 conn = sqlite3.connect('guests.db')
@@ -62,7 +63,7 @@ def filter_guests(df, search, checkin_filter, gift_filter):
         df = df[df['gift_received'] == 0]
     return df
 
-# Hàm tạo CSV cho export với cột cụ thể
+# Hàm tạo CSV cho export với encoding UTF-8 để hỗ trợ tiếng Việt
 def create_export_csv(filtered_df):
     export_df = pd.DataFrame({
         'STT': range(1, len(filtered_df) + 1),
@@ -73,12 +74,15 @@ def create_export_csv(filtered_df):
         'Thời gian check in': filtered_df['check_in_time'].fillna(''),
         'Thời gian nhận quà': filtered_df['gift_confirm_time'].fillna('')
     })
-    return export_df.to_csv(index=False)
+    # Sử dụng StringIO và encoding UTF-8-sig để export
+    csv_buffer = StringIO()
+    export_df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    return csv_buffer.getvalue()
 
 # UI Streamlit với sidebar
 st.set_page_config(page_title="Quản lý Khách mời", page_icon="✈️", layout="wide")
 
-# CSS cho theme Vietnam Airlines (xanh và vàng đồng), trẻ trung
+# CSS cho theme Vietnam Airlines (xanh và vàng đồng), trẻ trung, và fix màu chữ sidebar
 st.markdown("""
     <style>
     body { background: linear-gradient(135deg, #003366 0%, #FFD700 100%); color: white; font-family: Arial, sans-serif; }
@@ -88,6 +92,7 @@ st.markdown("""
     .stExpander { border: 3px solid #FFD700; border-radius: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); margin-bottom: 15px; background-color: rgba(255,255,255,0.1); }
     .stMetric { background: linear-gradient(45deg, #FFD700, #FFA500); border-radius: 15px; padding: 15px; box-shadow: 4px 4px 10px rgba(0,0,0,0.3); color: #003366; font-weight: bold; }
     .stSidebar { background-color: #003366; color: white; }
+    .stRadio label { color: white !important; }  /* Fix màu chữ menu để hiện rõ */
     @media (max-width: 768px) { .stColumns { flex-direction: column; } }
     </style>
 """, unsafe_allow_html=True)
@@ -141,20 +146,26 @@ elif menu == "Xem Danh sách":
     with col4:
         st.metric("Tỷ lệ Hoàn thành", f"{(checked_in_count + gift_received_count) / (2 * total_guests) * 100:.1f}%" if total_guests > 0 else "0%")
     
-    # Tìm kiếm và lọc
+    # Tìm kiếm và lọc với form submit
     st.subheader("🔍 Tìm kiếm và Lọc")
-    search = st.text_input("Tìm kiếm theo tên hoặc chức danh", placeholder="Nhập từ khóa...")
-    checkin_filter = st.selectbox("Lọc theo Check-in", ["Tất cả", "Đã check-in", "Chưa check-in"])
-    gift_filter = st.selectbox("Lọc theo Nhận quà", ["Tất cả", "Đã nhận quà", "Chưa nhận quà"])
+    with st.form("filter_form"):
+        search = st.text_input("Tìm kiếm theo tên hoặc chức danh", placeholder="Nhập từ khóa...")
+        checkin_filter = st.selectbox("Lọc theo Check-in", ["Tất cả", "Đã check-in", "Chưa check-in"])
+        gift_filter = st.selectbox("Lọc theo Nhận quà", ["Tất cả", "Đã nhận quà", "Chưa nhận quà"])
+        submitted = st.form_submit_button("🔍 Áp dụng Tìm kiếm và Lọc")
     
-    # Áp dụng lọc
-    filtered_df = filter_guests(df, search, checkin_filter, gift_filter)
+    # Áp dụng lọc chỉ khi submit
+    if submitted:
+        filtered_df = filter_guests(df, search, checkin_filter, gift_filter)
+        st.session_state['filtered_df'] = filtered_df  # Lưu vào session để giữ sau refresh
+    else:
+        filtered_df = st.session_state.get('filtered_df', df)  # Sử dụng dữ liệu đã lọc trước đó nếu có
     
     # Export báo cáo
     if not filtered_df.empty:
         csv = create_export_csv(filtered_df)
         st.download_button("📥 Export Báo cáo (CSV)", csv, "guests_report.csv", "text/csv", key="download_csv")
-        st.info("💡 Mở file CSV trong Excel/Google Sheets và set font thành Times New Roman để định dạng đẹp hơn.")
+        st.info("💡 File CSV đã được export với encoding UTF-8 để hỗ trợ tiếng Việt. Mở trong Excel và set font Times New Roman nếu cần.")
     
     if st.button("🔄 Refresh Data"):
         st.rerun()
